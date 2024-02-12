@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Yandex-Practicum/go-db-sql-final/parcel"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,10 +21,10 @@ var (
 )
 
 // getTestParcel возвращает тестовую посылку
-func getTestParcel() Parcel {
-	return Parcel{
+func getTestParcel() parcel.Parcel {
+	return parcel.Parcel{
 		Client:    1000,
-		Status:    ParcelStatusRegistered,
+		Status:    parcel.ParcelStatusRegistered,
 		Address:   "test",
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
@@ -31,64 +33,109 @@ func getTestParcel() Parcel {
 // TestAddGetDelete проверяет добавление, получение и удаление посылки
 func TestAddGetDelete(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
-	store := NewParcelStore(db)
+	db, err := sql.Open("sqlite", "tracker.db") // настраиваем подключение к БД
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := parcel.NewParcelStore(db)
 	parcel := getTestParcel()
 
 	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	// добавляем новую посылку в БД
+	parcelID, err := store.Add(parcel)
+	require.NoError(t, err)
+	require.NotEmpty(t, parcelID)
 
 	// get
-	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
+	// получаем только что добавленную посылку
+	gotParcel, err := store.Get(parcelID)
+	require.NoError(t, err)
+	gotParcel.Number = parcel.Number
+	assert.Equal(t, parcel, gotParcel)
 
 	// delete
-	// удалите добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что посылку больше нельзя получить из БД
+	// удаляем добавленную посылку
+	// проверяем, что посылку больше нельзя получить из БД
+	err = store.Delete(parcelID)
+	require.NoError(t, err)
+
+	got, err := store.Get(parcelID)
+	require.Equal(t, sql.ErrNoRows, err)
+	require.Empty(t, got)
 }
 
 // TestSetAddress проверяет обновление адреса
 func TestSetAddress(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := parcel.NewParcelStore(db)
+	parcel := getTestParcel()
 
 	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	// добавляем новую посылку в БД
+	parcelID, err := store.Add(parcel)
+	require.NoError(t, err)
+	require.NotEmpty(t, parcelID)
 
 	// set address
-	// обновите адрес, убедитесь в отсутствии ошибки
+	// обновляем адрес
 	newAddress := "new test address"
+	err = store.SetAddress(parcelID, newAddress)
+	require.NoError(t, err)
 
 	// check
-	// получите добавленную посылку и убедитесь, что адрес обновился
+	// получаем добавленную посылку и проверяем, что адрес обновился
+	got, err := store.Get(parcelID)
+	require.NoError(t, err)
+	assert.Equal(t, newAddress, got.Address)
 }
 
 // TestSetStatus проверяет обновление статуса
 func TestSetStatus(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := parcel.NewParcelStore(db)
+	p := getTestParcel()
 
 	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	// добавляем новую посылку в БД
+	parcelID, err := store.Add(p)
+	require.NoError(t, err)
+	require.NotEmpty(t, parcelID)
 
 	// set status
-	// обновите статус, убедитесь в отсутствии ошибки
+	// обновляем статус
+	err = store.SetStatus(parcelID, parcel.ParcelStatusSent)
+	require.NoError(t, err)
 
 	// check
-	// получите добавленную посылку и убедитесь, что статус обновился
+	// получаем добавленную посылку и проверяем, что статус обновился
+	got, err := store.Get(parcelID)
+	require.NoError(t, err)
+	assert.Equal(t, parcel.ParcelStatusSent, got.Status)
 }
 
 // TestGetByClient проверяет получение посылок по идентификатору клиента
 func TestGetByClient(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	require.NoError(t, err)
+	defer db.Close()
 
-	parcels := []Parcel{
+	store := parcel.NewParcelStore(db)
+
+	parcels := []parcel.Parcel{
 		getTestParcel(),
 		getTestParcel(),
 		getTestParcel(),
 	}
-	parcelMap := map[int]Parcel{}
+	parcelMap := map[int]parcel.Parcel{}
 
 	// задаём всем посылкам один и тот же идентификатор клиента
 	client := randRange.Intn(10_000_000)
@@ -98,7 +145,10 @@ func TestGetByClient(t *testing.T) {
 
 	// add
 	for i := 0; i < len(parcels); i++ {
-		id, err := // добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+		// добавдляем новую посылку в БД
+		id, err := store.Add(parcels[i])
+		require.NoError(t, err)
+		require.NotEmpty(t, id)
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
@@ -108,14 +158,19 @@ func TestGetByClient(t *testing.T) {
 	}
 
 	// get by client
-	storedParcels, err := // получите список посылок по идентификатору клиента, сохранённого в переменной client
-	// убедитесь в отсутствии ошибки
-	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
+	// получаем список посылок по идентификатору клиента, сохранённого в переменной client
+	storedParcels, err := store.GetByClient(client)
+
+	// проверяем, что количество полученных посылок совпадает с количеством добавленных
+	require.NoError(t, err)
+	require.Equal(t, len(parcels), len(storedParcels))
 
 	// check
-	for _, parcel := range storedParcels {
+	for _, p := range storedParcels {
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		// убедитесь, что все посылки из storedParcels есть в parcelMap
-		// убедитесь, что значения полей полученных посылок заполнены верно
+		// проверяем, что все посылки из storedParcels есть в parcelMap
+		require.Equal(t, p, parcelMap[p.Number])
+		// проверяем, что значения полей полученных посылок заполнены верно
+		require.Equal(t, storedParcels, parcels)
 	}
 }

@@ -3,37 +3,25 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/Yandex-Practicum/go-db-sql-final/parcel"
 	_ "modernc.org/sqlite"
 )
 
-const (
-	ParcelStatusRegistered = "registered"
-	ParcelStatusSent       = "sent"
-	ParcelStatusDelivered  = "delivered"
-)
-
-type Parcel struct {
-	Number    int
-	Client    int
-	Status    string
-	Address   string
-	CreatedAt string
-}
-
 type ParcelService struct {
-	store ParcelStore
+	store parcel.ParcelStore
 }
 
-func NewParcelService(store ParcelStore) ParcelService {
+func NewParcelService(store parcel.ParcelStore) ParcelService {
 	return ParcelService{store: store}
 }
 
-func (s ParcelService) Register(client int, address string) (Parcel, error) {
-	parcel := Parcel{
+func (s ParcelService) Register(client int, address string) (parcel.Parcel, error) {
+	parcel := parcel.Parcel{
 		Client:    client,
-		Status:    ParcelStatusRegistered,
+		Status:    parcel.ParcelStatusRegistered,
 		Address:   address,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
@@ -68,18 +56,18 @@ func (s ParcelService) PrintClientParcels(client int) error {
 }
 
 func (s ParcelService) NextStatus(number int) error {
-	parcel, err := s.store.Get(number)
+	p, err := s.store.Get(number)
 	if err != nil {
 		return err
 	}
 
 	var nextStatus string
-	switch parcel.Status {
-	case ParcelStatusRegistered:
-		nextStatus = ParcelStatusSent
-	case ParcelStatusSent:
-		nextStatus = ParcelStatusDelivered
-	case ParcelStatusDelivered:
+	switch p.Status {
+	case parcel.ParcelStatusRegistered:
+		nextStatus = parcel.ParcelStatusSent
+	case parcel.ParcelStatusSent:
+		nextStatus = parcel.ParcelStatusDelivered
+	case parcel.ParcelStatusDelivered:
 		return nil
 	}
 
@@ -97,9 +85,13 @@ func (s ParcelService) Delete(number int) error {
 }
 
 func main() {
-	// настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db")
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	store := // создайте объект ParcelStore функцией NewParcelStore
+	store := parcel.NewParcelStore(db)
 	service := NewParcelService(store)
 
 	// регистрация посылки
