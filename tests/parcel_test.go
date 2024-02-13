@@ -38,7 +38,7 @@ func getTestParcel() parcel.Parcel {
 // TestAddGetDelete проверяет добавление, получение и удаление посылки
 func TestAddGetDelete(t *testing.T) {
 	// prepare
-	db, err := sql.Open("sqlite", "../tracker.db") // настраиваем подключение к БД
+	db, err := sql.Open("sqlite", "test.db") // настраиваем подключение к БД
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -149,11 +149,11 @@ func TestGetByClient(t *testing.T) {
 	parcels[2].Client = client
 
 	// add
-	for i := 0; i < len(parcels); i++ { //
+	for i, parcel := range parcels {
 		// добавдляем новую посылку в БД
-		id, err := store.Add(parcels[i])
-		require.NoError(t, err, "addition should succeed") //
-		require.NotEmpty(t, id, "created id is not empty")
+		id, err := store.Add(parcel)
+		require.NoError(t, err, "addition should succeed")
+		assert.Greater(t, id, 0)
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id

@@ -3,7 +3,6 @@ package parcel
 import (
 	"database/sql"
 	"fmt"
-	"log"
 )
 
 const (
@@ -85,7 +84,6 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 		}
 		res = append(res, parcel)
 	}
-
 	return res, nil
 }
 
@@ -97,25 +95,17 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 // SetAddress обновляет адреса в таблице parcel
 // менять адрес можно только если значение статуса registered
 func (s ParcelStore) SetAddress(number int, address string) error {
-	parcel, err := s.Get(number)
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = :status",
+		sql.Named("number", number),
+		sql.Named("address", address),
+		sql.Named("status", ParcelStatusRegistered))
 	if err != nil {
-		log.Println(err)
-	}
-	if parcel.Status == ParcelStatusRegistered {
-		_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number",
-			sql.Named("number", number),
-			sql.Named("address", address))
-		if err != nil {
-			return err
-		}
-	} else {
 		return fmt.Errorf("Changing address is only allowed when status = registered")
 	}
 	return nil
@@ -124,22 +114,11 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 // Delete удаляет строки из таблицы parcel
 // удалять строку можно только если значение статуса registered
 func (s ParcelStore) Delete(number int) error {
-	p := Parcel{}
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number",
-		sql.Named("number", number))
-
-	err := row.Scan(&p.Status)
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status",
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 	if err != nil {
-		return err
-	}
-	if p.Status == ParcelStatusRegistered {
-		_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number", sql.Named("number", number))
-		if err != nil {
-			return err
-		}
-	} else {
 		return fmt.Errorf("Deleting of parcel %d is only allowed when status = registered", number)
 	}
-
 	return nil
 }
