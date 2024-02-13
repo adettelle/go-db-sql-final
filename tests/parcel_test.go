@@ -1,4 +1,4 @@
-package main
+package parcel
 
 import (
 	"database/sql"
@@ -6,9 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Yandex-Practicum/go-db-sql-final/parcel"
+	"github.com/Yandex-Practicum/go-db-sql-final/internal/parcel"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
+)
+
+const (
+	dbLocation = "../tracker.db"
 )
 
 var (
@@ -33,7 +38,7 @@ func getTestParcel() parcel.Parcel {
 // TestAddGetDelete проверяет добавление, получение и удаление посылки
 func TestAddGetDelete(t *testing.T) {
 	// prepare
-	db, err := sql.Open("sqlite", "tracker.db") // настраиваем подключение к БД
+	db, err := sql.Open("sqlite", "../tracker.db") // настраиваем подключение к БД
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -67,7 +72,7 @@ func TestAddGetDelete(t *testing.T) {
 // TestSetAddress проверяет обновление адреса
 func TestSetAddress(t *testing.T) {
 	// prepare
-	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	db, err := sql.Open("sqlite", dbLocation) // подключение к БД
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -96,7 +101,7 @@ func TestSetAddress(t *testing.T) {
 // TestSetStatus проверяет обновление статуса
 func TestSetStatus(t *testing.T) {
 	// prepare
-	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	db, err := sql.Open("sqlite", dbLocation) // подключение к БД
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -124,7 +129,7 @@ func TestSetStatus(t *testing.T) {
 // TestGetByClient проверяет получение посылок по идентификатору клиента
 func TestGetByClient(t *testing.T) {
 	// prepare
-	db, err := sql.Open("sqlite", "tracker.db") // подключение к БД
+	db, err := sql.Open("sqlite", dbLocation) // подключение к БД
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -144,11 +149,11 @@ func TestGetByClient(t *testing.T) {
 	parcels[2].Client = client
 
 	// add
-	for i := 0; i < len(parcels); i++ {
+	for i := 0; i < len(parcels); i++ { //
 		// добавдляем новую посылку в БД
 		id, err := store.Add(parcels[i])
-		require.NoError(t, err)
-		require.NotEmpty(t, id)
+		require.NoError(t, err, "addition should succeed") //
+		require.NotEmpty(t, id, "created id is not empty")
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
@@ -163,6 +168,7 @@ func TestGetByClient(t *testing.T) {
 
 	// проверяем, что количество полученных посылок совпадает с количеством добавленных
 	require.NoError(t, err)
+	assert.ElementsMatch(t, parcels, storedParcels)
 	require.Equal(t, len(parcels), len(storedParcels))
 
 	// check
