@@ -135,12 +135,12 @@ func TestGetByClient(t *testing.T) {
 
 	store := parcel.NewParcelStore(db)
 
+	// в parcels лежат добавленные посылки
 	parcels := []parcel.Parcel{
 		getTestParcel(),
 		getTestParcel(),
 		getTestParcel(),
 	}
-	parcelMap := map[int]parcel.Parcel{}
 
 	// задаём всем посылкам один и тот же идентификатор клиента
 	client := randRange.Intn(10_000_000)
@@ -157,26 +157,13 @@ func TestGetByClient(t *testing.T) {
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
-
-		// сохраняем добавленную посылку в структуру map, чтобы её можно было легко достать по идентификатору посылки
-		parcelMap[id] = parcels[i]
 	}
 
 	// get by client
 	// получаем список посылок по идентификатору клиента, сохранённого в переменной client
 	storedParcels, err := store.GetByClient(client)
 
-	// проверяем, что количество полученных посылок совпадает с количеством добавленных
+	// проверяем, что количество полученные посылки совпадают с добавленными
 	require.NoError(t, err)
 	assert.ElementsMatch(t, parcels, storedParcels)
-	require.Equal(t, len(parcels), len(storedParcels))
-
-	// check
-	for _, p := range storedParcels {
-		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		// проверяем, что все посылки из storedParcels есть в parcelMap
-		require.Equal(t, p, parcelMap[p.Number])
-		// проверяем, что значения полей полученных посылок заполнены верно
-		require.Equal(t, storedParcels, parcels)
-	}
 }

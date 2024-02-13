@@ -2,6 +2,7 @@ package parcel
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 )
 
@@ -27,7 +28,7 @@ func NewParcelStore(db *sql.DB) ParcelStore {
 	return ParcelStore{db: db}
 }
 
-// добавление строки в таблицу parcel, используя данные из переменной p
+// Add добавляет строки в таблицу parcel, используя данные из переменной p
 func (s ParcelStore) Add(p Parcel) (int, error) {
 	p.Status = ParcelStatusRegistered
 
@@ -49,8 +50,8 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 	return int(id), nil
 }
 
-// чтение строки по заданному number
-// Get: из таблицы должна вернуться только одна строка
+// Get читает строки по заданному number
+// здесь из таблицы должна вернуться только одна строка
 func (s ParcelStore) Get(number int) (Parcel, error) {
 	p := Parcel{}
 	row := s.db.QueryRow("SELECT number, client, status, address, created_at from parcel WHERE number = :number",
@@ -64,7 +65,7 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	return p, nil
 }
 
-// чтение строк из таблицы parcel по заданному client
+// GetByClient читает строки из таблицы parcel по заданному client
 // здесь из таблицы может вернуться несколько строк
 func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	rows, err := s.db.Query("SELECT number, client, status, address, created_at FROM parcel WHERE client = :client",
@@ -88,7 +89,7 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	return res, nil
 }
 
-// обновление статуса в таблице parcel
+// SetStatus обновляет статус в таблице parcel
 func (s ParcelStore) SetStatus(number int, status string) error {
 	_, err := s.db.Exec("UPDATE parcel SET status = :status WHERE number = :number",
 		sql.Named("number", number),
@@ -100,7 +101,7 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 	return nil
 }
 
-// обновление адреса в таблице parcel
+// SetAddress обновляет адреса в таблице parcel
 // менять адрес можно только если значение статуса registered
 func (s ParcelStore) SetAddress(number int, address string) error {
 	parcel, err := s.Get(number)
@@ -115,12 +116,12 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 			return err
 		}
 	} else {
-		log.Println(err)
+		return fmt.Errorf("Changing address is only allowed when status = registered")
 	}
 	return nil
 }
 
-// удаление строки из таблицы parcel
+// Delete удаляет строки из таблицы parcel
 // удалять строку можно только если значение статуса registered
 func (s ParcelStore) Delete(number int) error {
 	p := Parcel{}
@@ -137,7 +138,7 @@ func (s ParcelStore) Delete(number int) error {
 			return err
 		}
 	} else {
-		log.Println(err)
+		return fmt.Errorf("Deleting of parcel %d is only allowed when status = registered", number)
 	}
 
 	return nil

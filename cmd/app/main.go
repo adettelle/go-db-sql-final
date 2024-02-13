@@ -51,10 +51,10 @@ func main() {
 	}
 
 	// попытка удаления отправленной посылки
+	fmt.Printf("Попытка удаления отправленной посылки %d\n", p.Number)
 	err = service.Delete(p.Number)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
 	// вывод посылок клиента
@@ -73,6 +73,7 @@ func main() {
 	}
 
 	// удаление новой посылки
+	fmt.Printf("Удаление новой посылки %d\n", p.Number)
 	err = service.Delete(p.Number)
 	if err != nil {
 		fmt.Println(err)
